@@ -27,8 +27,8 @@ def make_parser():
     parser.add_argument("-n", "--name", type=str, default=None, help="model name")
 
     parser.add_argument(
-        #"--path", default="./datasets/mot/train/MOT17-05-FRCNN/img1", help="path to images or video"
-        "--path", default="./videos/palace.mp4", help="path to images or video"
+        "--path", default="./datasets/mot/train/MOT17-05-FRCNN/img1", help="path to images or video"
+        # "--path", default="./videos/palace.mp4", help="path to images or video"
     )
     parser.add_argument("--camid", type=int, default=0, help="webcam demo camera id")
     parser.add_argument(
@@ -216,12 +216,15 @@ def image_demo(predictor, vis_folder, path, current_time, save_result):
             )
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
+            print("Save tracked image to {}".format(save_file_name))
             cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
             break
-    #write_results(result_filename, results)
+    result_filename = os.path.join(save_folder, os.path.basename("result.txt"))
+    print("Save results to {}".format(result_filename))
+    write_results(result_filename, results)
 
 
 def imageflow_demo(predictor, vis_folder, current_time, args):
@@ -307,7 +310,7 @@ def main(exp, args):
     model = exp.get_model()
     logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
 
-    if args.device == "gpu":
+    if torch.cuda.is_available():
         model.cuda()
     model.eval()
 
