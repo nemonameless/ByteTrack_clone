@@ -39,7 +39,7 @@ def make_parser():
     parser.add_argument(
         "--save_name",
         type=str,
-        default="MOT17-05-FRCNN"
+        default="MOT17-05-FRCNN",
         help="save name for results txt/video",
     )
 
@@ -228,7 +228,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
             break
-    result_filename = os.path.join(save_folder, os.path.basename(save_name + '.txt'))
+    result_filename = os.path.join(vis_folder, os.path.basename(save_name + '.txt'))
     print("Save results to {}".format(result_filename))
     write_results(result_filename, results)
 
@@ -351,7 +351,7 @@ def main(exp, args):
         trt_file = None
         decoder = None
 
-    predictor = Predictor(model, exp, trt_file, decoder, args.device, args.fp16, args.save_name)
+    predictor = Predictor(model, exp, trt_file, decoder, args.device, args.fp16)
     current_time = time.localtime()
     if args.demo == "image":
         image_demo(predictor, vis_folder, args.path, current_time, args.save_result, args.save_name)
