@@ -14,8 +14,8 @@ from yolox.tracking_utils.timer import Timer
 import argparse
 import os
 import time
-from yolov5.models.experimental import attempt_load
-from yolov5.utils.general import check_img_size, non_max_suppression
+from models.experimental import attempt_load
+from utils.general import check_img_size, non_max_suppression
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
 device = "cpu"
@@ -174,10 +174,10 @@ class Predictor(object):
         img_info["ratio"] = ratio
         img = torch.from_numpy(img).unsqueeze(0)
         img = img.float()
-        # if self.device == "gpu":
-        #     img = img.cuda()
-        #     if self.fp16:
-        #         img = img.half()  # to FP16
+        if self.device == "gpu":
+            img = img.cuda()
+            if self.fp16:
+                img = img.half()  # to FP16
 
         with torch.no_grad():
             timer.tic()
@@ -353,12 +353,12 @@ def main(exp, args):
     #     # model = attempt_load(ckpt)
     #     logger.info("loaded checkpoint done.")
 
-    # if args.fuse:
-    #     logger.info("\tFusing model...")
-    #     model = fuse_model(model)
+    if args.fuse:
+        logger.info("\tFusing model...")
+        model = fuse_model(model)
     
-    if args.fp16:
-            model = model.half()  # to FP16
+    # if args.fp16:
+    #         model = model.half()  # to FP16
 
     if args.trt:
         assert not args.fuse, "TensorRT model is not support model fusing!"
@@ -376,7 +376,7 @@ def main(exp, args):
     predictor = Predictor(model, exp, trt_file, decoder, args.device, args.fp16)
     current_time = time.localtime()
     if args.demo == "image":
-        image_demo(predictor, vis_folder, args.path, current_time, args.save_result)
+        image_demo(predictor, vis_folder, args.path, current_time, args.save_result, args.save_name)
     elif args.demo == "video" or args.demo == "webcam":
         imageflow_demo(predictor, vis_folder, current_time, args)
 
