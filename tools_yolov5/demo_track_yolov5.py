@@ -99,8 +99,7 @@ def make_parser():
 def init_det(weights):
     # Load model
     model = attempt_load(weights, map_location=device)  # load FP32 model
-    # model = torch.load(weights, map_location=device)[
-    #     'model'].float()  # load to FP32
+    # model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
     model.to(device).eval()
     return model
 
@@ -186,7 +185,7 @@ class Predictor(object):
             outputs = self.model(img, augment=args.augment)[0]
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
-            print("outputs : ", outputs)
+            # print("outputs : ", outputs)
             # outputs = non_max_suppression(outputs, self.confthre, iou_thres=0.5, classes=self.num_classes, agnostic=self.nmsthre)
             outputs = postprocess(
                 outputs, self.num_classes, self.confthre, self.nmsthre
@@ -359,8 +358,8 @@ def main(exp, args):
     #     logger.info("\tFusing model...")
     #     model = fuse_model(model)
     
-    # if args.fp16:
-    #         model = model.half()  # to FP16
+    if args.fp16:
+            model = model.half()  # to FP16
 
     if args.trt:
         assert not args.fuse, "TensorRT model is not support model fusing!"
