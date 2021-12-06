@@ -161,16 +161,18 @@ class Predictor(object):
             if self.fp16:
                 img = img.half()  # to FP16
 
+    
         with torch.no_grad():
             timer.tic()
             outputs = self.model(img)
+            print('before process:' , outputs[0][0])
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
             outputs = postprocess(
                 outputs, self.num_classes, self.confthre, self.nmsthre
             )
             #logger.info("Infer time: {:.4f}s".format(time.time() - t0))
-        print(outputs)
+            print('after process:' , outputs[0][0])
         return outputs, img_info
 
 

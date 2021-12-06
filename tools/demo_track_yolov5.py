@@ -164,12 +164,14 @@ class Predictor(object):
         with torch.no_grad():
             timer.tic()
             outputs = self.model(img)
+            print('before process:' , outputs[0][0])
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
             outputs = postprocess(
                 outputs, self.num_classes, self.confthre, self.nmsthre
             )
             #logger.info("Infer time: {:.4f}s".format(time.time() - t0))
+            print('after process:' , outputs[0][0])
         return outputs, img_info
 
 
@@ -307,7 +309,8 @@ def main(exp, args):
     if args.tsize is not None:
         exp.test_size = (args.tsize, args.tsize)
 
-    model = exp.get_model()
+    # model = exp.get_model()
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
     logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
 
     if torch.cuda.is_available():
@@ -315,14 +318,13 @@ def main(exp, args):
     model.eval()
 
     if not args.trt:
-        if args.ckpt is None:
-            ckpt_file = os.path.join(file_name, "best_ckpt.pth.tar")
-        else:
-            ckpt_file = args.ckpt
-        logger.info("loading checkpoint")
-        ckpt = torch.load(ckpt_file, map_location="cpu")
+        # if args.ckpt is None:
+        #     ckpt_file = os.path.join(file_name, "best_ckpt.pth.tar")
+        # else:
+        #     ckpt_file = args.ckpt
+        # logger.info("loading checkpoint")
+        # ckpt = torch.load(ckpt_file, map_location="cpu")
         # load the model state dict
-        model.load_state_dict(ckpt["model"])
         logger.info("loaded checkpoint done.")
 
     if args.fuse:
