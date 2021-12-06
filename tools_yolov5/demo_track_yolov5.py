@@ -10,13 +10,12 @@ from yolox.utils import fuse_model, get_model_info, postprocess, vis
 from yolox.utils.visualize import plot_tracking
 from yolox.tracker.byte_tracker import BYTETracker
 from yolox.tracking_utils.timer import Timer
-from models.experimental import attempt_load
-from utils.torch_utils import select_device
+
 import argparse
 import os
 import time
-# from yolov5_v4.models.experimental import attempt_load
-# from yolov5_v4.utils.general import check_img_size, non_max_suppression
+from yolov5.models.experimental import attempt_load
+from yolov5.utils.general import check_img_size, non_max_suppression
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
 device = "cpu"
