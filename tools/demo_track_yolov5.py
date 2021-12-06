@@ -36,6 +36,12 @@ def make_parser():
         action="store_true",
         help="whether to save the inference result of image/video",
     )
+    parser.add_argument(
+        "--save_name",
+        type=str,
+        default="MOT17-05-FRCNN"
+        help="save name for results txt/video",
+    )
 
     # exp file
     parser.add_argument(
@@ -117,7 +123,7 @@ class Predictor(object):
         trt_file=None,
         decoder=None,
         device="cpu",
-        fp16=False
+        fp16=False,
     ):
         self.model = model
         self.decoder = decoder
@@ -173,7 +179,7 @@ class Predictor(object):
         return outputs, img_info
 
 
-def image_demo(predictor, vis_folder, path, current_time, save_result):
+def image_demo(predictor, vis_folder, path, current_time, save_result, save_name):
     if os.path.isdir(path):
         files = get_image_list(path)
     else:
@@ -212,7 +218,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result):
         #result_image = predictor.visual(outputs[0], img_info, predictor.confthre)
         if save_result:
             save_folder = os.path.join(
-                vis_folder, time.strftime("%Y_%m_%d_%H_%M_%S", current_time)
+                vis_folder, save_name
             )
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
@@ -222,7 +228,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result):
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
             break
-    result_filename = os.path.join(save_folder, os.path.basename("result.txt"))
+    result_filename = os.path.join(save_folder, os.path.basename(save_name + '.txt'))
     print("Save results to {}".format(result_filename))
     write_results(result_filename, results)
 
@@ -345,7 +351,7 @@ def main(exp, args):
         trt_file = None
         decoder = None
 
-    predictor = Predictor(model, exp, trt_file, decoder, args.device, args.fp16)
+    predictor = Predictor(model, exp, trt_file, decoder, args.device, args.fp16, args.save_name)
     current_time = time.localtime()
     if args.demo == "image":
         image_demo(predictor, vis_folder, args.path, current_time, args.save_result)
