@@ -170,6 +170,7 @@ class Predictor(object):
                 outputs, self.num_classes, self.confthre, self.nmsthre
             )
             #logger.info("Infer time: {:.4f}s".format(time.time() - t0))
+        print(outputs)
         return outputs, img_info
 
 
