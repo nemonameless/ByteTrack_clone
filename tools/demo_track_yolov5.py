@@ -10,12 +10,16 @@ from yolox.utils import fuse_model, get_model_info, postprocess, vis
 from yolox.utils.visualize import plot_tracking
 from yolox.tracker.byte_tracker import BYTETracker
 from yolox.tracking_utils.timer import Timer
-
+from yolov5_v4.models.experimental import attempt_load
+from yolov5_v4.utils.torch_utils import select_device
 import argparse
 import os
 import time
+from models.experimental import attempt_load
+from utils.general import check_img_size, non_max_suppression
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
+device = "cpu"
 
 
 def make_parser():
@@ -51,10 +55,10 @@ def make_parser():
         type=str,
         help="pls input your expriment description file",
     )
-    parser.add_argument("-c", "--ckpt", default=None, type=str, help="ckpt for eval")
+    parser.add_argument("-c", "--ckpt", default="./yolov5s.pt", type=str, help="ckpt for eval")
     parser.add_argument(
         "--device",
-        default="gpu",
+        default="cpu",
         type=str,
         help="device to run our model, can either be cpu or gpu",
     )
@@ -88,7 +92,17 @@ def make_parser():
     parser.add_argument("--match_thresh", type=float, default=0.8, help="matching threshold for tracking")
     parser.add_argument('--min-box-area', type=float, default=10, help='filter out tiny boxes')
     parser.add_argument("--mot20", dest="mot20", default=False, action="store_true", help="test mot20.")
+    parser.add_argument('--augment', action='store_true', help='augmented inference')
     return parser
+
+
+def init_det(weights):
+    # Load model
+    model = attempt_load(weights, map_location=device)  # load FP32 model
+    # model = torch.load(weights, map_location=device)[
+    #     'model'].float()  # load to FP32
+    model.to(device).eval()
+    return model
 
 
 def get_image_list(path):
@@ -123,25 +137,25 @@ class Predictor(object):
         trt_file=None,
         decoder=None,
         device="cpu",
-        fp16=False,
+        fp16=False
     ):
         self.model = model
         self.decoder = decoder
-        self.num_classes = exp.num_classes
+        self.num_classes = exp.num_classes # 3
         self.confthre = exp.test_conf
         self.nmsthre = exp.nmsthre
         self.test_size = exp.test_size
         self.device = device
         self.fp16 = fp16
-        if trt_file is not None:
-            from torch2trt import TRTModule
+        # if trt_file is not None:
+        #     from torch2trt import TRTModule
 
-            model_trt = TRTModule()
-            model_trt.load_state_dict(torch.load(trt_file))
+        #     model_trt = TRTModule()
+        #     model_trt.load_state_dict(torch.load(trt_file))
 
-            x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda()
-            self.model(x)
-            self.model = model_trt
+        #     x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda()
+        #     self.model(x)
+        #     self.model = model_trt
         self.rgb_means = (0.485, 0.456, 0.406)
         self.std = (0.229, 0.224, 0.225)
 
@@ -162,20 +176,22 @@ class Predictor(object):
         img_info["ratio"] = ratio
         img = torch.from_numpy(img).unsqueeze(0)
         img = img.float()
-        if self.device == "gpu":
-            img = img.cuda()
-            if self.fp16:
-                img = img.half()  # to FP16
+        # if self.device == "gpu":
+        #     img = img.cuda()
+        #     if self.fp16:
+        #         img = img.half()  # to FP16
 
         with torch.no_grad():
             timer.tic()
-            outputs = self.model(img)
+            outputs = self.model(img, augment=args.augment)[0]
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
+            print("outputs : ", outputs)
+            # outputs = non_max_suppression(outputs, self.confthre, iou_thres=0.5, classes=self.num_classes, agnostic=self.nmsthre)
             outputs = postprocess(
                 outputs, self.num_classes, self.confthre, self.nmsthre
             )
-            # logger.info("Infer time: {:.4f}s".format(time.time() - t0))
+            #logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return outputs, img_info
 
 
@@ -238,14 +254,15 @@ def imageflow_demo(predictor, vis_folder, current_time, args):
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)  # float
     fps = cap.get(cv2.CAP_PROP_FPS)
+    save_name = args.save_name
     save_folder = os.path.join(
-        vis_folder, time.strftime("%Y_%m_%d_%H_%M_%S", current_time)
-    )
+                vis_folder, save_name
+            )
     os.makedirs(save_folder, exist_ok=True)
     if args.demo == "video":
         save_path = os.path.join(save_folder, args.path.split("/")[-1])
     else:
-        save_path = os.path.join(save_folder, "camera.mp4")
+        save_path = os.path.join(save_folder, saev_name + ".mp4")
     logger.info(f"video save_path is {save_path}")
     vid_writer = cv2.VideoWriter(
         save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (int(width), int(height))
@@ -258,8 +275,12 @@ def imageflow_demo(predictor, vis_folder, current_time, args):
         if frame_id % 20 == 0:
             logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
         ret_val, frame = cap.read()
+        frame = cv2.resize(frame, (1280, 720))
         if ret_val:
             outputs, img_info = predictor.inference(frame, timer)
+            print("outputs : ", outputs)
+
+            # for i, det in enumerate(outputs):
             if outputs[0] is not None:
                 online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
                 online_tlwhs = []
@@ -282,6 +303,7 @@ def imageflow_demo(predictor, vis_folder, current_time, args):
                 online_im = img_info['raw_img']
             if args.save_result:
                 vid_writer.write(online_im)
+            cv2.imshow("online_im", online_im)
             ch = cv2.waitKey(1)
             if ch == 27 or ch == ord("q") or ch == ord("Q"):
                 break
@@ -313,30 +335,32 @@ def main(exp, args):
     if args.tsize is not None:
         exp.test_size = (args.tsize, args.tsize)
 
+    model = init_det(args.ckpt)
+
     # model = exp.get_model()
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
     logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
 
-    if torch.cuda.is_available():
-        model.cuda()
-    model.eval()
+    # if args.device == "gpu":
+    #     model.cuda()
+    # model.eval()
 
-    if not args.trt:
-        # if args.ckpt is None:
-        #     ckpt_file = os.path.join(file_name, "best_ckpt.pth.tar")
-        # else:
-        #     ckpt_file = args.ckpt
-        # logger.info("loading checkpoint")
-        # ckpt = torch.load(ckpt_file, map_location="cpu")
-        # load the model state dict
-        logger.info("loaded checkpoint done.")
+    # if not args.trt:
+    #     if args.ckpt is None:
+    #         ckpt_file = os.path.join(file_name, "best_ckpt.pth.tar")
+    #     else:
+    #         ckpt_file = args.ckpt
+    #     logger.info("loading checkpoint")
+    #     # ckpt = torch.load(ckpt_file, map_location="cpu")
+    #     # load the model state dict
+    #     # model = attempt_load(ckpt)
+    #     logger.info("loaded checkpoint done.")
 
-    if args.fuse:
-        logger.info("\tFusing model...")
-        model = fuse_model(model)
+    # if args.fuse:
+    #     logger.info("\tFusing model...")
+    #     model = fuse_model(model)
     
-    if args.fp16:
-            model = model.half()  # to FP16
+    # if args.fp16:
+    #         model = model.half()  # to FP16
 
     if args.trt:
         assert not args.fuse, "TensorRT model is not support model fusing!"
@@ -354,7 +378,7 @@ def main(exp, args):
     predictor = Predictor(model, exp, trt_file, decoder, args.device, args.fp16)
     current_time = time.localtime()
     if args.demo == "image":
-        image_demo(predictor, vis_folder, args.path, current_time, args.save_result, args.save_name)
+        image_demo(predictor, vis_folder, args.path, current_time, args.save_result)
     elif args.demo == "video" or args.demo == "webcam":
         imageflow_demo(predictor, vis_folder, current_time, args)
 
