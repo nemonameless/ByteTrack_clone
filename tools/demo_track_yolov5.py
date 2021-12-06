@@ -308,7 +308,7 @@ def main(exp, args):
         exp.test_size = (args.tsize, args.tsize)
 
     # model = exp.get_model()
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5x', pretrained=True)
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
     logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
 
     if torch.cuda.is_available():
