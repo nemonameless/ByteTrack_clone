@@ -54,7 +54,7 @@ def make_parser():
         type=str,
         help="pls input your expriment description file",
     )
-    parser.add_argument("-c", "--ckpt", default="./yolov5s.pt", type=str, help="ckpt for eval")
+    parser.add_argument("-c", "--ckpt", default="./pretrained/yolov5s.pt", type=str, help="ckpt for eval")
     parser.add_argument(
         "--device",
         default="cpu",
