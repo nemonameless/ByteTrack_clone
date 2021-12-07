@@ -222,7 +222,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
             )
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
-            print("Save tracked image to {}".format(save_file_name))
+            # print("Save tracked image to {}".format(save_file_name))
             # cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
