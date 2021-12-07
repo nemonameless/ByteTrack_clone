@@ -95,12 +95,12 @@ def make_parser():
     return parser
 
 
-# def init_det(weights, device):
-#     # Load model
-#     model = attempt_load(weights, map_location=device)  # load FP32 model
-#     # model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
-#     model.to(device).eval()
-#     return model
+def init_det(weights, device):
+    # Load model
+    model = attempt_load(weights, map_location=device)  # load FP32 model
+    # model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
+    model.to(device).eval()
+    return model
 
 
 def get_image_list(path):
@@ -236,8 +236,8 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
             )
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
-            # print("Save tracked image to {}".format(save_file_name))
-            # cv2.imwrite(save_file_name, online_im)
+            print("Save tracked image to {}".format(save_file_name))
+            cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
@@ -333,8 +333,15 @@ def main(exp, args):
     if args.tsize is not None:
         exp.test_size = (args.tsize, args.tsize)
 
-    model = attempt_load(args.ckpt, args.device)
+    ckpt_file = args.ckpt
+    model = attempt_load(ckpt_file, map_location="cpu")
+    if args.device == "gpu":
+        model.cuda()
     model.eval()
+    # model = attempt_load(args.ckpt, args.device)
+    # print('device: {}'.format(args.device))
+    # model.to(args.device)
+    # model.eval()
 
     # model = exp.get_model()
     # logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
