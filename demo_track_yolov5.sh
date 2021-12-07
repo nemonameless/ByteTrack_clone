@@ -18,7 +18,8 @@ do
 	(
 		# run inference on sequence frames
 		# python3 tools_yolov5/demo_track_yolov5.py --path ./datasets/mot/train/$i/img1 image -f exps/example/mot/yolov5_s_mix_det.py --save_result --save_name $i
-		python3 tools/demo_track_yolov5.py --path ./datasets/mot/train/$i/img1 image -f exps/example/mot/yolov5_s_mix_det.py --save_result --save_name $i --fuse --fp16
+		# python3 tools/demo_track_yolov5.py --path ./datasets/mot/train/$i/img1 image -f exps/example/mot/yolov5_s_mix_det.py --save_result --save_name $i --fuse --fp16
+		python3 tools/demo_track.py --path ./datasets/mot/train/$i/img1 image -f exps/example/mot/yolox_x_mix_det.py --save_result --save_name $i --fuse --fp16
 	)
 done
 

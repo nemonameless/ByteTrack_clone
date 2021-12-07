@@ -36,6 +36,12 @@ def make_parser():
         action="store_true",
         help="whether to save the inference result of image/video",
     )
+    parser.add_argument(
+        "--save_name",
+        type=str,
+        default="MOT17-05-FRCNN",
+        help="save name for results txt/video",
+    )
 
     # exp file
     parser.add_argument(
@@ -174,7 +180,7 @@ class Predictor(object):
         return outputs, img_info
 
 
-def image_demo(predictor, vis_folder, path, current_time, save_result):
+def image_demo(predictor, vis_folder, path, current_time, save_result, save_name):
     if os.path.isdir(path):
         files = get_image_list(path)
     else:
@@ -217,12 +223,14 @@ def image_demo(predictor, vis_folder, path, current_time, save_result):
             )
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
-            cv2.imwrite(save_file_name, online_im)
+            # cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
             break
-    #write_results(result_filename, results)
+    result_filename = os.path.join(vis_folder, os.path.basename(save_name + '.txt'))
+    print("Save results to {}".format(result_filename))
+    write_results(result_filename, results)
 
 
 def imageflow_demo(predictor, vis_folder, current_time, args):
@@ -346,7 +354,7 @@ def main(exp, args):
     predictor = Predictor(model, exp, trt_file, decoder, args.device, args.fp16)
     current_time = time.localtime()
     if args.demo == "image":
-        image_demo(predictor, vis_folder, args.path, current_time, args.save_result)
+        image_demo(predictor, vis_folder, args.path, current_time, args.save_result, args.save_video)
     elif args.demo == "video" or args.demo == "webcam":
         imageflow_demo(predictor, vis_folder, current_time, args)
 
