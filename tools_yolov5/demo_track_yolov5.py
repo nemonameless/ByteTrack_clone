@@ -18,7 +18,7 @@ from models.experimental import attempt_load
 from utils.general import check_img_size, non_max_suppression
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
-device = "cpu"
+# device = "cpu"
 
 
 def make_parser():
@@ -57,7 +57,7 @@ def make_parser():
     parser.add_argument("-c", "--ckpt", default="./pretrained/crowdhuman_yolov5m.pt", type=str, help="ckpt for eval")
     parser.add_argument(
         "--device",
-        default="cpu",
+        default="gpu",
         type=str,
         help="device to run our model, can either be cpu or gpu",
     )
@@ -95,12 +95,12 @@ def make_parser():
     return parser
 
 
-def init_det(weights):
-    # Load model
-    model = attempt_load(weights, map_location=device)  # load FP32 model
-    # model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
-    model.to(device).eval()
-    return model
+# def init_det(weights, device):
+#     # Load model
+#     model = attempt_load(weights, map_location=device)  # load FP32 model
+#     # model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
+#     model.to(device).eval()
+#     return model
 
 
 def get_image_list(path):
@@ -145,15 +145,15 @@ class Predictor(object):
         self.test_size = exp.test_size
         self.device = device
         self.fp16 = fp16
-        # if trt_file is not None:
-        #     from torch2trt import TRTModule
+        if trt_file is not None:
+            from torch2trt import TRTModule
 
-        #     model_trt = TRTModule()
-        #     model_trt.load_state_dict(torch.load(trt_file))
+            model_trt = TRTModule()
+            model_trt.load_state_dict(torch.load(trt_file))
 
-        #     x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda()
-        #     self.model(x)
-        #     self.model = model_trt
+            x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda()
+            self.model(x)
+            self.model = model_trt
         self.rgb_means = (0.485, 0.456, 0.406)
         self.std = (0.229, 0.224, 0.225)
 
@@ -333,14 +333,11 @@ def main(exp, args):
     if args.tsize is not None:
         exp.test_size = (args.tsize, args.tsize)
 
-    model = init_det(args.ckpt)
+    model = attempt_load(args.ckpt, args.device)
+    model.eval()
 
     # model = exp.get_model()
     # logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
-
-    # if args.device == "gpu":
-    #     model.cuda()
-    # model.eval()
 
     # if not args.trt:
     #     if args.ckpt is None:
