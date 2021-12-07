@@ -54,7 +54,7 @@ def make_parser():
         type=str,
         help="pls input your expriment description file",
     )
-    parser.add_argument("-c", "--ckpt", default="./pretrained/yolov5s.pt", type=str, help="ckpt for eval")
+    parser.add_argument("-c", "--ckpt", default="./pretrained/crowdhuman_yolov5m.pt", type=str, help="ckpt for eval")
     parser.add_argument(
         "--device",
         default="cpu",
@@ -236,8 +236,8 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
             )
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
-            print("Save tracked image to {}".format(save_file_name))
-            cv2.imwrite(save_file_name, online_im)
+            # print("Save tracked image to {}".format(save_file_name))
+            # cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
@@ -336,7 +336,7 @@ def main(exp, args):
     model = init_det(args.ckpt)
 
     # model = exp.get_model()
-    logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
+    # logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
 
     # if args.device == "gpu":
     #     model.cuda()
@@ -358,7 +358,7 @@ def main(exp, args):
         model = fuse_model(model)
     
     # if args.fp16:
-    #         model = model.half()  # to FP16
+    #     model = model.half()  # to FP16
 
     if args.trt:
         assert not args.fuse, "TensorRT model is not support model fusing!"
