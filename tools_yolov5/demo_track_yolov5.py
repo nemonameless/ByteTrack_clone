@@ -184,7 +184,7 @@ class Predictor(object):
             outputs = self.model(img, augment=args.augment)[0]
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
-            print("outputs : ", outputs)
+            print("outputs : ", outputs[0])
             # outputs = non_max_suppression(outputs, self.confthre, iou_thres=0.5, classes=self.num_classes, agnostic=self.nmsthre)
             outputs = postprocess(
                 outputs, self.num_classes, self.confthre, self.nmsthre
