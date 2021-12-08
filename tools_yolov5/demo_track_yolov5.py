@@ -139,7 +139,7 @@ class Predictor(object):
     ):
         self.model = model
         self.decoder = decoder
-        self.num_classes = exp.num_classes # 3
+        self.num_classes = exp.num_classes # 1
         self.confthre = exp.test_conf
         self.nmsthre = exp.nmsthre
         self.test_size = exp.test_size
@@ -184,11 +184,9 @@ class Predictor(object):
             outputs = self.model(img, augment=args.augment)[0]
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
-            print("outputs : ", outputs[0])
-            # outputs = non_max_suppression(outputs, self.confthre, iou_thres=0.5, classes=self.num_classes, agnostic=self.nmsthre)
-            outputs = postprocess(
-                outputs, self.num_classes, self.confthre, self.nmsthre
-            )
+            # outputs = non_max_suppression(outputs)
+            outputs = postprocess(outputs, self.num_classes, self.confthre, self.nmsthre)
+
             #logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return outputs, img_info
 
