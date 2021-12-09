@@ -15,7 +15,8 @@ import argparse
 import os
 import time
 from models.experimental import attempt_load
-from utils.general import check_img_size, non_max_suppression
+# from utils.general import check_img_size, non_max_suppression
+
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
 # device = "cpu"
@@ -184,10 +185,10 @@ class Predictor(object):
             outputs = self.model(img, augment=args.augment)[0]
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
-            # outputs = non_max_suppression(outputs)
             outputs = postprocess(outputs, self.num_classes, self.confthre, self.nmsthre)
-            for i in range(len(outputs[0]))[:10]:
-                print(outputs[0][i][:5])
+
+            print('detect num:', len(outputs[0]))
+            
             #logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return outputs, img_info
 
@@ -208,6 +209,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
         outputs, img_info = predictor.inference(image_name, timer)
         if outputs[0] is not None:
             online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
+            print('online_targets:', len(online_targets))
             online_tlwhs = []
             online_ids = []
             online_scores = []

@@ -176,8 +176,8 @@ class Predictor(object):
             outputs = postprocess(
                 outputs, self.num_classes, self.confthre, self.nmsthre
             )
-            for i in range(len(outputs[0]))[:10]:
-                print(outputs[0][i][:5])
+            print('detect num:', len(outputs[0]))
+
             # logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return outputs, img_info
 
@@ -198,6 +198,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
         outputs, img_info = predictor.inference(image_name, timer)
         if outputs[0] is not None:
             online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
+            print('online_targets:', len(online_targets))
             online_tlwhs = []
             online_ids = []
             online_scores = []
@@ -225,7 +226,8 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
             )
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
-            # cv2.imwrite(save_file_name, online_im)
+            print("Save tracked image to {}".format(save_file_name))
+            cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
