@@ -192,6 +192,7 @@ class Predictor(object):
 
             try: 
                 print('detect num:', len(outputs[0]))
+                print(outputs[0][0])
             except:
                 print('detect num:', 0)    
             
@@ -223,7 +224,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
                 tlwh = t.tlwh
                 tid = t.track_id
                 vertical = tlwh[2] / tlwh[3] > 1.6
-                if tlwh[2] * tlwh[3] > args.min_box_area and not vertical:
+                if tlwh[2] * tlwh[3] > args.min_box_area: #and not vertical:
                     online_tlwhs.append(tlwh)
                     online_ids.append(tid)
                     online_scores.append(t.score)
