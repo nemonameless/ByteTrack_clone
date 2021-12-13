@@ -13,7 +13,7 @@ then
     rm -r MOT17.zip
 fi
 
-for i in MOT17-02-FRCNN MOT17-04-FRCNN MOT17-05-FRCNN MOT17-09-FRCNN MOT17-10-FRCNN MOT17-11-FRCNN MOT17-13-FRCNN
+for i in MOT17-02-FRCNN
 do
 	(
 		# run inference on sequence frames
