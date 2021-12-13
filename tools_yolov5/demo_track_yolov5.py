@@ -1,3 +1,4 @@
+from numpy.lib.npyio import save
 from loguru import logger
 
 import cv2
@@ -198,6 +199,21 @@ class Predictor(object):
             #logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return outputs, img_info
 
+def save_outputs(outputs, folder, save_name):
+    if not os.path.exists('outputs'):
+        os.mkdir('outputs')
+
+    save_name = os.path.join('outputs', folder, save_name)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    with open(save_name, 'w') as f:
+        if outputs[0] is not None:
+                for i in range(len(outputs[0])):
+                    for j in range(len(outputs[0][i])):
+                        f.write(str(outputs[0][i][j]) + ' ')
+                    f.write('\n')
+            
+
 
 def image_demo(predictor, vis_folder, path, current_time, save_result, save_name):
     if os.path.isdir(path):
@@ -213,6 +229,9 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
         if frame_id % 20 == 0:
             logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
         outputs, img_info = predictor.inference(image_name, timer)
+        
+        save_outputs(outputs, save_name, image_name)
+
         if outputs[0] is not None:
             online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
             print('online_targets:', len(online_targets))
@@ -284,7 +303,6 @@ def imageflow_demo(predictor, vis_folder, current_time, args):
         frame = cv2.resize(frame, (1280, 720))
         if ret_val:
             outputs, img_info = predictor.inference(frame, timer)
-            print("outputs : ", outputs)
 
             # for i, det in enumerate(outputs):
             if outputs[0] is not None:
