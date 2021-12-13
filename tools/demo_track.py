@@ -159,6 +159,7 @@ class Predictor(object):
         img_info["raw_img"] = img
 
         img, ratio = preproc(img, self.test_size, self.rgb_means, self.std)
+        # print('preporc shape', img.shape)
         img_info["ratio"] = ratio
         img = torch.from_numpy(img).unsqueeze(0)
         img = img.float()
@@ -185,6 +186,22 @@ class Predictor(object):
             # logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return outputs, img_info
 
+def save_outputs(outputs, folder, save_name):
+    sn = save_name.split('/')[-1].replace('.jpg', '.txt')
+    if not os.path.exists('yolovx_outputs'):
+        os.mkdir('yolovx_outputs')
+
+    sn = os.path.join('yolovx_outputs', folder, sn)
+    if not os.path.exists(os.path.join('yolovx_outputs', folder)):
+        os.mkdir(os.path.join('yolovx_outputs', folder))
+    # open or creat new file if dont exist
+    with open(sn, 'w') as f:
+        if outputs[0] is not None:
+                for i in range(len(outputs[0])):
+                    op = outputs[0][i].tolist()
+                    for j in op:
+                        f.write(str(j) + ' ')
+                    f.write('\n')
 
 def image_demo(predictor, vis_folder, path, current_time, save_result, save_name):
     if os.path.isdir(path):
@@ -200,8 +217,13 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
         if frame_id % 20 == 0:
             logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
         outputs, img_info = predictor.inference(image_name, timer)
+        # print(outputs[0])
+        # print(outputs[0].tolist())
+        save_outputs(outputs, save_name, image_name)
+
         if outputs[0] is not None:
             online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
+            # print('height:', img_info['height'], 'width:', img_info['width'])
             print('online_targets:', len(online_targets))
             online_tlwhs = []
             online_ids = []
@@ -231,7 +253,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
             print("Save tracked image to {}".format(save_file_name))
-            cv2.imwrite(save_file_name, online_im)
+            # cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
