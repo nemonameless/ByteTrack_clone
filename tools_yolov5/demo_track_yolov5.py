@@ -1,4 +1,3 @@
-from numpy.lib.npyio import save
 from loguru import logger
 import numpy as np
 
@@ -20,8 +19,7 @@ import time
 from models.experimental import attempt_load
 from models.common import DetectMultiBackend
 from utils.general import check_img_size, non_max_suppression
-from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
-from utils.augmentations import Albumentations, augment_hsv, copy_paste, letterbox, mixup, random_perspective
+from utils.augmentations import letterbox
 
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
@@ -37,7 +35,7 @@ def make_parser():
     parser.add_argument("-n", "--name", type=str, default=None, help="model name")
 
     parser.add_argument(
-        "--path", default="./datasets/mot/train/MOT17-05-FRCNN/img1", help="path to images or video"
+        "--path", default="./datasets/mot/train/MOT17-02-FRCNN/img1", help="path to images or video"
         # "--path", default="./videos/palace.mp4", help="path to images or video"
     )
     parser.add_argument("--camid", type=int, default=0, help="webcam demo camera id")
@@ -49,7 +47,7 @@ def make_parser():
     parser.add_argument(
         "--save_name",
         type=str,
-        default="MOT17-05-FRCNN",
+        default="MOT17-02-FRCNN",
         help="save name for results txt/video",
     )
 
@@ -100,15 +98,6 @@ def make_parser():
     parser.add_argument("--mot20", dest="mot20", default=False, action="store_true", help="test mot20.")
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     return parser
-
-
-def init_det(weights, device):
-    # Load model
-    model = attempt_load(weights, map_location=device)  # load FP32 model
-    # model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
-    model.to(device).eval()
-    return model
-
 
 def get_image_list(path):
     image_names = []
@@ -177,33 +166,40 @@ class Predictor(object):
         img_info["width"] = width
         img_info["raw_img"] = img
 
-        img, ratio = preproc(img, self.test_size, self.rgb_means, self.std)
-        # img = letterbox(img)[0]
-        # print('letterbox img:', img.shape)
-        # # Convert
-        # img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
-        # img = np.ascontiguousarray(img)
-        img_info["ratio"] = 1 # ratio
-        img = torch.from_numpy(img).unsqueeze(0)
-        img = img.float()
-        # img = img / 255.0 # 0 - 255 to 0.0 - 1.0
-        if self.device == "gpu":
-            img = img.cuda()
-            if self.fp16:
-                img = img.half()  # to FP16
+        # img, ratio = preproc(img, self.test_size, self.rgb_means, self.std)
+        # img_info["ratio"] = ratio
+        # img = torch.from_numpy(img).unsqueeze(0)
+        # img = img.float()
+        # if self.device == "gpu":
+        #     img = img.cuda()
+        #     if self.fp16:
+        #         img = img.half()  # to FP16
+
+        img = letterbox(img, self.test_size)[0]
+        # print('letterbox:', img.shape)
+        # Convert
+        img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        img = np.ascontiguousarray(img)
+        
+        img = torch.from_numpy(img).cuda()
+        img = img.half() if self.fp16 else img.float()  # uint8 to fp16/32
+        img /= 255  # 0 - 255 to 0.0 - 1.0
+        if len(img.shape) == 3:
+            img = img[None]  # expand for batch dim
 
         with torch.no_grad():
             timer.tic()
-            print('image shape:', img.size())
+            # print('image shape:', img.size())
             # print(img)
             outputs = self.model(img)
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
             print('before nms:', outputs.size())
             outputs = postprocess(outputs, self.num_classes, self.confthre, self.nmsthre, classes=[0])
-            print(outputs[0].numpy())
+            print(outputs[0].cpu().numpy())
             try: 
                 print('detect num:', len(outputs[0]))
+                
             except:
                 print('detect num:', 0)    
             
@@ -247,6 +243,8 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
 
         if outputs[0] is not None:
             online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
+            # print('height:', img_info['height'], 'width:', img_info['width'])
+            # print('test size:', exp.test_size)
             print('online_targets:', len(online_targets))
             online_tlwhs = []
             online_ids = []
