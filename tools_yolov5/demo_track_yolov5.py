@@ -1,5 +1,6 @@
 from numpy.lib.npyio import save
 from loguru import logger
+import numpy as np
 
 import cv2
 
@@ -19,6 +20,8 @@ import time
 from models.experimental import attempt_load
 from models.common import DetectMultiBackend
 from utils.general import check_img_size, non_max_suppression
+from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
+from utils.augmentations import Albumentations, augment_hsv, copy_paste, letterbox, mixup, random_perspective
 
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
@@ -175,10 +178,15 @@ class Predictor(object):
         img_info["raw_img"] = img
 
         img, ratio = preproc(img, self.test_size, self.rgb_means, self.std)
-        # print('preporc shape', img.shape)
-        img_info["ratio"] = ratio
+        # img = letterbox(img)[0]
+        # print('letterbox img:', img.shape)
+        # # Convert
+        # img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        # img = np.ascontiguousarray(img)
+        img_info["ratio"] = 1 # ratio
         img = torch.from_numpy(img).unsqueeze(0)
         img = img.float()
+        # img = img / 255.0 # 0 - 255 to 0.0 - 1.0
         if self.device == "gpu":
             img = img.cuda()
             if self.fp16:
@@ -186,12 +194,14 @@ class Predictor(object):
 
         with torch.no_grad():
             timer.tic()
+            print('image shape:', img.size())
+            # print(img)
             outputs = self.model(img)
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
             print('before nms:', outputs.size())
             outputs = postprocess(outputs, self.num_classes, self.confthre, self.nmsthre, classes=[0])
-
+            print(outputs[0].numpy())
             try: 
                 print('detect num:', len(outputs[0]))
             except:
@@ -233,12 +243,10 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
         if frame_id % 20 == 0:
             logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
         outputs, img_info = predictor.inference(image_name, timer)
-        # print(outputs[0])
         save_outputs(outputs, save_name, image_name)
 
         if outputs[0] is not None:
             online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
-            # print('height:', img_info['height'], 'width:', img_info['width'])
             print('online_targets:', len(online_targets))
             online_tlwhs = []
             online_ids = []
@@ -248,7 +256,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
                 tid = t.track_id
                 vertical = tlwh[2] / tlwh[3] > 1.6
 
-                if tlwh[2] * tlwh[3] > args.min_box_area: #and not vertical:
+                if tlwh[2] * tlwh[3] > args.min_box_area and not vertical:
                     online_tlwhs.append(tlwh)
                     online_ids.append(tid)
                     online_scores.append(t.score)
@@ -269,7 +277,7 @@ def image_demo(predictor, vis_folder, path, current_time, save_result, save_name
             os.makedirs(save_folder, exist_ok=True)
             save_file_name = os.path.join(save_folder, os.path.basename(image_name))
             print("Save tracked image to {}".format(save_file_name))
-            # cv2.imwrite(save_file_name, online_im)
+            cv2.imwrite(save_file_name, online_im)
         ch = cv2.waitKey(0)
         frame_id += 1
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
